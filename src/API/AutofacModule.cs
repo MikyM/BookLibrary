@@ -1,4 +1,5 @@
 ﻿using Application.Services;
+using AttributeBasedRegistration.Autofac;
 using Autofac;
 using DataExplorer;
 using DataExplorer.EfCore;
@@ -41,6 +42,8 @@ public class AutofacModule : Module
                 efOpt.BaseGenericDataServiceLifetime = ServiceLifetime.InstancePerLifetimeScope;
             }, assembly);
         });
+        
+        builder.RegisterAsyncInterceptorAdapter();
         
         base.Load(builder);
     }

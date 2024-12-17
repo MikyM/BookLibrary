@@ -45,4 +45,16 @@ public abstract class Publication : SnowflakeEntityBase, IPublication
     
     /// <inheritdoc/>
     public long Shelf { get; set; }
+    
+    public void WithAuthors(IEnumerable<Author> authors)
+    {
+        _authors = authors.ToHashSet();
+    }
+    
+    public void WithAuthor(Author author)
+    {
+        _authors ??= new HashSet<Author>();
+        
+        _authors.Add(author);
+    }
 }

@@ -13,6 +13,7 @@
     <ItemGroup>
       <PackageReference Include="Autofac" Version="8.1.1" />
       <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="10.0.0" />
+      <PackageReference Include="EasyCaching.Bus.Redis" Version="1.9.2" />
       <PackageReference Include="EasyCaching.HybridCache" Version="1.9.2" />
       <PackageReference Include="EasyCaching.InMemory" Version="1.9.2" />
       <PackageReference Include="EasyCaching.Redis" Version="1.9.2" />
@@ -21,6 +22,7 @@
       <PackageReference Include="FluentValidation.AspNetCore" Version="11.3.0" />
       <PackageReference Include="MediatR" Version="12.4.1" />
       <PackageReference Include="OneOf" Version="3.0.271" />
+      <PackageReference Include="StackExchange.Redis.Extensions.AspNetCore" Version="10.2.0" />
       <PackageReference Include="ZiggyCreatures.FusionCache" Version="1.4.1" />
       <PackageReference Include="ZiggyCreatures.FusionCache.Backplane.StackExchangeRedis" Version="1.4.1" />
       <PackageReference Include="ZiggyCreatures.FusionCache.Serialization.SystemTextJson" Version="1.4.1" />

@@ -5,9 +5,9 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace DataAccess.Configurations;
 
-public class OrderEntityConfiguration : BaseEntityConfiguration<Order,Guid>
+public class OrderConfiguration : BaseEntityConfiguration<Order,Guid>
 {
-    public override void ConfigureEntity(EntityTypeBuilder<Order> builder)
+    protected override void ConfigureEntity(EntityTypeBuilder<Order> builder)
     {
         builder.ToTable("order");
         

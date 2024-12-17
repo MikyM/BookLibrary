@@ -1,13 +1,17 @@
+using System.Net;
 using API;
 using API.Extensions;
 using Application.MediatR.Behaviors;
 using Application.MediatR.Queries.Book;
 using Application.Services;
 using Application.Validators;
+using Autofac;
+using Autofac.Extensions.DependencyInjection;
 using FluentValidation;
 using Serilog;
 using Serilog.Events;
 using Serilog.Formatting.Compact;
+using StackExchange.Redis;
 
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
@@ -35,16 +39,28 @@ try
             y.SetIsOriginAllowed(_ => true);
         }));
 
-    builder.Services.ConfigureAuth(builder.Configuration);
+    builder.Services.ConfigureAuth(builder.Configuration); 
     
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddSwaggerGen();
 
     builder.Services.ConfigureVersioning();
+    
+    var redisConfig = new ConfigurationOptions()
+    {
+        EndPoints = [ new DnsEndPoint(builder.Configuration.GetValue<string>("Redis:Host")!, builder.Configuration.GetValue<int>("Redis:Port") ) ],
+        Password = builder.Configuration.GetValue<string>("Redis:Password")
+    };
 
-    builder.Services.ConfigureDatabase(builder.Configuration);
+    var multiplexer = await ConnectionMultiplexer.ConnectAsync(redisConfig);
+
+    builder.Services.AddSingleton<IConnectionMultiplexer>(multiplexer);
+
+    builder.Services.ConfigureDatabase(builder.Configuration, redisConfig);
 
     builder.Services.ConfigureRateLimiting();
+
+    builder.Services.AddProblemDetails();
 
     builder.Services.AddExceptionHandler(opt =>
     {
@@ -55,13 +71,20 @@ try
 
     builder.Services.AddValidatorsFromAssembly(typeof(GridifyQueryValidator).Assembly);
 
+    builder.Services.AddHealthChecks();
+
     builder.Services.AddMediatR(opt =>
     {
-        opt.AddBehavior(typeof(LoggingBehavior<,>));
-        opt.AddBehavior(typeof(ExceptionToResultBehavior<,>));
+        opt.AddOpenBehavior(typeof(LoggingBehavior<,>));
+        opt.AddOpenBehavior(typeof(ExceptionToResultBehavior<,>));
 
         opt.RegisterServicesFromAssembly(typeof(GetBookById).Assembly);
     });
+
+    builder.Host.UseServiceProviderFactory(new AutofacServiceProviderFactory(x =>
+    {
+        x.RegisterAssemblyModules(typeof(AutofacModule).Assembly);
+    }));
 
     var app = builder.Build();
     
@@ -80,7 +103,7 @@ try
         app.UseSwaggerUI();
     }
 
-    app.UseHttpsRedirection();
+    //app.UseHttpsRedirection();
 
     app.UseRateLimiter();
 

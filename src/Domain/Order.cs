@@ -7,8 +7,17 @@ public sealed class Order : EntityBase<Guid>
     private HashSet<OrderDetail>? _orderDetails;
     private HashSet<Publication>? _publications;
 
+    public override Guid Id { get; protected set; } = Guid.NewGuid();
+
     public IEnumerable<OrderDetail>? OrderDetails => _orderDetails?.AsEnumerable();
     public IEnumerable<Publication>? Publications => _publications?.AsEnumerable();
+    
+    public void AddDetail(Publication publication, int quantity)
+    {
+        var detail = new OrderDetail(Id, publication.Id, quantity);
+        
+        ConcatDetails([ detail ]);
+    }
 
     public void WithDetails(IEnumerable<OrderDetail> orderDetails)
     {
@@ -28,44 +37,40 @@ public sealed class Order : EntityBase<Guid>
 
     private void ConcatDetails(IEnumerable<OrderDetail> orderDetails)
     {
-        var array = orderDetails as OrderDetail[] ?? orderDetails.ToArray();
-        
-        if (_orderDetails is null)
+        var preMerged = _orderDetails is null
+            ? orderDetails
+            : _orderDetails.Concat(orderDetails);
+
+        var uniqueDetailGroups = preMerged.GroupBy(x => x.PublicationId);
+
+        foreach (var publicationGroup in uniqueDetailGroups)
         {
-            _orderDetails = array.ToHashSet();
-            return;
-        }
-
-        var uniqueDetailGroups = array.GroupBy(x => new { x.PublicationId, x.Publication?.Type });
-
-        foreach (var bookGroup in uniqueDetailGroups)
-        {
-            var count = bookGroup.Count();
+            var quantity = publicationGroup.Sum(x => x.Quantity);
             
-            if (count <= 1)
+            if (_orderDetails is not null)
             {
-                continue;
-            }
-            
-            // keep original and increment, remove newly created
-            var oldest = bookGroup.MinBy(x => x.CreatedAt);
-
-            if (oldest is null)
-            {
-                // maybe some logging etc.
-                continue;
-            }
+                var existing = _orderDetails.FirstOrDefault(x => x.PublicationId == publicationGroup.Key);
                 
-            var quantitySum = bookGroup.Sum(x => x.Quantity);
-                
-            oldest.Quantity = quantitySum;
-            
-            var removed = _orderDetails.RemoveWhere(x => oldest.PublicationId != x.PublicationId);
+                if (existing is not null)
+                {
+                    existing.Quantity = quantity;
+                }
+                else
+                {
+                    var toAdd = publicationGroup.First();
+                    toAdd.Quantity = quantity;
 
-            if (removed != count - 1)
+                    _orderDetails.Add(toAdd);
+                }
+            }
+            else
             {
-                // maybe some logging etc.
-                continue;
+                _orderDetails = new HashSet<OrderDetail>();
+                
+                var toAdd = publicationGroup.First();
+                toAdd.Quantity = quantity;
+                
+                _orderDetails.Add(toAdd);
             }
         }
     }

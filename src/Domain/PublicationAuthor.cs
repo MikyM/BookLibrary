@@ -14,9 +14,13 @@ public sealed class PublicationAuthor : ICreatedAtOffset, IUpdatedAtOffset, IVal
         AuthorId = authorId;
     }
 
+    public PublicationAuthor()
+    {
+    }
+
     public long PublicationId { get; }
     public Publication? Publication { get; set; }
-
+    
     public long AuthorId { get; }
     public Author? Author { get; set; }
 

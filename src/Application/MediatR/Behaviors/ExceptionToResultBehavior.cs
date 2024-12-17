@@ -3,7 +3,7 @@ using Remora.Results;
 
 namespace Application.MediatR.Behaviors;
 
-public class ExceptionToResultBehavior<TRequest,TResult> : IPipelineBehavior<TRequest,TResult> where TRequest : notnull
+public class ExceptionToResultBehavior<TRequest,TResult> : IPipelineBehavior<TRequest,TResult> where TRequest : IRequest<TResult>
 {
     public async Task<TResult> Handle(TRequest request, RequestHandlerDelegate<TResult> next, CancellationToken cancellationToken)
     {

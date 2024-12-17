@@ -1,12 +1,13 @@
 ﻿using Domain;
+using Domain.Base;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace DataAccess.Configurations;
 
-public class BookEntityConfiguration : BaseEntityConfiguration<Book,long>
+public class BookConfiguration : PublicationDerivedEntityConfiguration<Book>
 {
-    public override void ConfigureEntity(EntityTypeBuilder<Book> builder)
+    protected override void ConfigureEntity(EntityTypeBuilder<Book> builder)
     {
         builder.ToTable("book");
     }

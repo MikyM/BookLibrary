@@ -9,7 +9,11 @@ public abstract class BaseEntityConfiguration<TEntity,TId> : IEntityTypeConfigur
     public void Configure(EntityTypeBuilder<TEntity> builder)
     {
         builder.HasKey(x => x.Id);
+
+        builder.Property(x => x.Id).ValueGeneratedNever();
+        
+        ConfigureEntity(builder);
     }
     
-    public abstract void ConfigureEntity(EntityTypeBuilder<TEntity> builder);
+    protected abstract void ConfigureEntity(EntityTypeBuilder<TEntity> builder);
 }

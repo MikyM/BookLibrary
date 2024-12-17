@@ -1,0 +1,56 @@
+services:
+  #app:
+  #  build: 
+  #    dockerfile: Dockerfile
+  #    context: .
+  #  ports:
+  #    - '8000:8000'
+  #  environment:
+  #    - ASPNETCORE_ENVIRONMENT=Development
+  #    - ASPNETCORE_URLS=http://+:8000
+  redis:
+    image: 'bitnami/redis:latest'
+    ports:
+      - '6379:6379'
+    environment:
+      - REDIS_PASSWORD=password
+    volumes:
+      - 'redis-data:/bitnami'
+  db:
+    image: 'bitnami/postgresql:latest'
+    ports:
+      - '5432:5432'
+    volumes:
+      - 'db-data:/bitnami'
+    environment:
+      - POSTGRESQL_POSTGRES_PASSWORD=password
+      - POSTGRESQL_USERNAME=default
+      - POSTGRESQL_PASSWORD=password
+      - POSTGRESQL_DATABASE=book-library
+  pgadmin:
+    container_name: pgadmin_container
+    image: dpage/pgadmin4
+    ports:
+     - '8888:80'
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=default@mail.com
+      - PGADMIN_DEFAULT_PASSWORD=password
+      - PGADMIN_CONFIG_SERVER_MODE=False
+    volumes:
+       - pgadmin-data:/var/lib/pgadmin
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    restart: always
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=password
+      - HTTP_USER=default
+      - HTTP_PASSWORD=password
+    ports:
+      - 8081:8081
+
+volumes:
+  redis-data:
+  db-data:
+  pgadmin-data:

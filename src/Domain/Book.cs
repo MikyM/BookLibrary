@@ -11,5 +11,4 @@ public sealed class Book : Publication, IPublication
 {
     /// <inheritdoc/>
     public override PublicationType Type => PublicationType.Book;
-
 }

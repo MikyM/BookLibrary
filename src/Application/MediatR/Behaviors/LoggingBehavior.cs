@@ -6,7 +6,7 @@ using ILoggerFactory = Castle.Core.Logging.ILoggerFactory;
 namespace Application.MediatR.Behaviors;
 
 public class LoggingBehavior<TRequest, TResult>(ILogger<LoggingBehavior<TRequest, TResult>> logger)
-    : IPipelineBehavior<TRequest, TResult> where TRequest : notnull
+    : IPipelineBehavior<TRequest, TResult> where TRequest : IRequest<TResult>
 {
     public async Task<TResult> Handle(TRequest request, RequestHandlerDelegate<TResult> next, CancellationToken cancellationToken)
     {

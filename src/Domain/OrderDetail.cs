@@ -15,6 +15,17 @@ public sealed class OrderDetail : ICreatedAtOffset, IUpdatedAtOffset, IValueObje
         Quantity = quantity;
     }
     
+    public OrderDetail(Order order, Publication publication, int quantity)
+    {
+        PublicationId = publication.Id;
+        OrderId = order.Id;
+        Quantity = quantity;
+    }
+
+    public OrderDetail()
+    {
+    }
+    
     public Guid OrderId { get; }
     public Order? Order { get; set; }
     

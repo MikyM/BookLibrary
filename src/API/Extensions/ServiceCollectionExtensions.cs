@@ -1,12 +1,15 @@
-﻿using System.Threading.RateLimiting;
-using Asp.Versioning;
+﻿using Asp.Versioning;
 using DataAccess;
+using EasyCaching.Core.Configurations;
+using EasyCaching.Redis;
+using EasyCaching.Serialization.SystemTextJson.Configurations;
 using EFCoreSecondLevelCacheInterceptor;
 using Keycloak.AuthServices.Authentication;
 using Keycloak.AuthServices.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using StackExchange.Redis;
 
 namespace API.Extensions;
 
@@ -96,33 +99,57 @@ public static class ServiceCollectionExtensions
         return services;
     }
     
-    public static IServiceCollection ConfigureDatabase(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection ConfigureDatabase(this IServiceCollection services, IConfiguration configuration, ConfigurationOptions redisOptions)
     {
         services.AddEFSecondLevelCache(opt =>
         {
             #if DEBUG
             opt.ConfigureLogging(true);
             #endif
-            
-            opt.UseEasyCachingCoreProvider("Default");
+
+            opt.UseEasyCachingCoreProvider("Hybrid", true);
         });
 
         services.AddEasyCaching(opt =>
         {
-            opt.UseInMemory("Default");
+            opt.WithSystemTextJson("JsonSerializer");
             
-            /* configure distributed cache
+            opt.UseInMemory(mopt =>
+            {
+                mopt.SerializerName = "JsonSerializer";
+            }, "Default");
             
             opt.UseRedisLock();
             
             opt.UseRedis(ropt =>
             {
-                ropt.EnableLogging = true;
+                ropt.SerializerName = "JsonSerializer";
                 
-                // configure rest...
-            }, "Redis");*/
+                ropt.EnableLogging = true;
+
+                ropt.DBConfig = new RedisDBOptions
+                {
+                    ConfigurationOptions = redisOptions
+                };
+            }, "Redis");
             
-            // enable hybrid cache
+            // combine local and distributed
+            opt.UseHybrid(config =>
+                {
+                    config.TopicName = "cache-topic";
+                    config.EnableLogging = false;
+
+
+                    config.LocalCacheProviderName = "Default";
+
+                    config.DistributedCacheProviderName = "Redis";
+                }, "Hybrid")
+                // use redis bus
+                .WithRedisBus(busConf => 
+                {
+                    busConf.ConfigurationOptions = redisOptions;
+                    busConf.SerializerName = "JsonSerializer";
+                });
         });
         
         services.AddDbContext<IBookLibraryDbContext, BookLibraryDbContext>((provider,opt) =>
@@ -130,7 +157,7 @@ public static class ServiceCollectionExtensions
             opt.UseSnakeCaseNamingConvention();
             opt.AddInterceptors(provider.GetRequiredService<SecondLevelCacheInterceptor>());
 
-            opt.UseNpgsql(configuration.GetConnectionString("dataContext"), pg =>
+            opt.UseNpgsql(configuration.GetConnectionString("DataContext"), pg =>
             {
                 // simple retry strategy
                 pg.EnableRetryOnFailure(3, TimeSpan.FromSeconds(10), null);

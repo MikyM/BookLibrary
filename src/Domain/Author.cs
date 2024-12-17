@@ -11,25 +11,13 @@ namespace Domain;
 /// </summary>
 public sealed class Author : SnowflakeEntityBase
 {
-    private HashSet<PublicationAuthor>? _bookAuthors;
-    private HashSet<Book>? _books;
-    private HashSet<Magazine>? _magazines;
+    private HashSet<PublicationAuthor>? _publicationAuthors;
     private HashSet<Publication>? _publications;
     
     /// <summary>
     /// Gets the publication authors collection (join entity).
     /// </summary>
-    public IEnumerable<PublicationAuthor>? PublicationAuthors => _bookAuthors?.AsEnumerable();
-    
-    /// <summary>
-    /// Gets the books that were written by this author.
-    /// </summary>
-    public IEnumerable<Book>? Books => _books?.AsEnumerable();
-    
-    /// <summary>
-    /// Gets the magazines that were written by this author.
-    /// </summary>
-    public IEnumerable<Magazine>? Magazines => _magazines?.AsEnumerable();
+    public IEnumerable<PublicationAuthor>? PublicationAuthors => _publicationAuthors?.AsEnumerable();
 
     /// <summary>
     /// Gets all publications that were written by this author.

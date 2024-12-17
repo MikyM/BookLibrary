@@ -4,9 +4,9 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace DataAccess.Configurations;
 
-public class MagazineEntityConfiguration : BaseEntityConfiguration<Magazine,long>
+public class MagazineConfiguration : PublicationDerivedEntityConfiguration<Magazine>
 {
-    public override void ConfigureEntity(EntityTypeBuilder<Magazine> builder)
+    protected override void ConfigureEntity(EntityTypeBuilder<Magazine> builder)
     {
         builder.ToTable("magazine");
     }
