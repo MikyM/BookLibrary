@@ -118,6 +118,8 @@ try
 
     builder.Services.AddHostedService<InitializationService>();
 
+    builder.Services.ConfigureOptions<BookLibraryJsonOptionsConfigurator>();
+
     builder.Services.AddValidatorsFromAssembly(typeof(AddBookPayloadValidator).Assembly);
 
     builder.Services.ConfigureHealthChecks(builder.Configuration, keycloakOptions);
