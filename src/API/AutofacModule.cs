@@ -4,6 +4,7 @@ using Autofac;
 using DataExplorer;
 using DataExplorer.EfCore;
 using DataExplorer.EfCore.Extensions;
+using Domain;
 using IdGen;
 using ServiceLifetime = AttributeBasedRegistration.ServiceLifetime;
 
@@ -14,6 +15,7 @@ public class AutofacModule : Module
     protected override void Load(ContainerBuilder builder)
     {
         var assembly  = typeof(InitializationService).Assembly;
+        var entityAssembly  = typeof(Book).Assembly;
         var assemblyArray = new[] { assembly };
         
         builder.AddDataExplorer(opt =>
@@ -40,7 +42,7 @@ public class AutofacModule : Module
                 efOpt.EnableIncludeCache = true;
                 efOpt.DataServiceLifetime = ServiceLifetime.InstancePerLifetimeScope;
                 efOpt.BaseGenericDataServiceLifetime = ServiceLifetime.InstancePerLifetimeScope;
-            }, assembly);
+            }, assembly, entityAssembly);
         });
         
         builder.RegisterAsyncInterceptorAdapter();

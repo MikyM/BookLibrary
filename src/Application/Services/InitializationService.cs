@@ -1,6 +1,6 @@
 ﻿using DataAccess;
-using Domain;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -9,33 +9,37 @@ namespace Application.Services;
 public class InitializationService : IHostedService
 {
     private readonly ILogger<InitializationService> _logger;
-    private readonly IBookLibraryDbContext _dbContext;
+    private readonly IServiceProvider _serviceProvider;
 
-    public InitializationService(ILogger<InitializationService> logger, IBookLibraryDbContext dbContext)
+    public InitializationService(ILogger<InitializationService> logger, IServiceProvider serviceProvider)
     {
         _logger = logger;
-        _dbContext = dbContext;
+        _serviceProvider = serviceProvider;
     }
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         _logger.LogInformation("Initializing the application..");
 
-        var applied = await _dbContext.Database.GetAppliedMigrationsAsync(cancellationToken);
+        await using var scope = _serviceProvider.CreateAsyncScope();
 
-        await _dbContext.Database.MigrateAsync(cancellationToken);
+        var dbContext = scope.ServiceProvider.GetRequiredService<IBookLibraryDbContext>();
+
+        var shouldSeed = !(await dbContext.Database.GetAppliedMigrationsAsync(cancellationToken)).Any();
+
+        await dbContext.Database.MigrateAsync(cancellationToken);
 
         // treat no migrations applied as a fresh db
-        if (!applied.Any())
+        if (shouldSeed)
         {
-            await SeedAsync(cancellationToken);
+            await SeedAsync(dbContext, cancellationToken);
         }
 
-        /*var allBooks = await _dbContext.Set<Book>().Include(x => x.Authors).ToListAsync(cancellationToken: cancellationToken);
-        var allMagazines = await _dbContext.Set<Magazine>().Include(x => x.Authors).ToListAsync(cancellationToken: cancellationToken);
-        var allPublications = await _dbContext.Set<Publication>().Include(x => x.Authors).ToListAsync(cancellationToken: cancellationToken);
+        /*var allBooks = await dbContext.Set<Book>().Include(x => x.Authors).ToListAsync(cancellationToken: cancellationToken);
+        var allMagazines = await dbContext.Set<Magazine>().Include(x => x.Authors).ToListAsync(cancellationToken: cancellationToken);
+        var allPublications = await dbContext.Set<Publication>().Include(x => x.Authors).ToListAsync(cancellationToken: cancellationToken);
         
-        var allAuthors = await _dbContext.Set<Author>().Include(x => x.Publications).ToListAsync(cancellationToken: cancellationToken);*/
+        var allAuthors = await dbContext.Set<Author>().Include(x => x.Publications).ToListAsync(cancellationToken: cancellationToken);*/
         
         _logger.LogInformation("Application initialized");
     }
@@ -47,7 +51,7 @@ public class InitializationService : IHostedService
         return Task.CompletedTask;
     }
 
-    private async Task SeedAsync(CancellationToken cancellationToken)
+    private async Task SeedAsync(IBookLibraryDbContext dbContext, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Seeding the database..");
 
@@ -56,9 +60,9 @@ public class InitializationService : IHostedService
         var author3 = new Author() { FirstName = "Julie", LastName = "Doe" };
         var author4 = new Author() { FirstName = "Julian", LastName = "Doe" };
         
-        await _dbContext.AddRangeAsync(author1, author2, author3, author4);
+        await dbContext.AddRangeAsync(author1, author2, author3, author4);
 
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        await dbContext.SaveChangesAsync(cancellationToken);
         
         var book1 = new Book() { Title = "Book 1", Bookstand = 1, Shelf = 1, Price = 10.56m };
         book1.WithAuthors(new List<Author> { author1, author3 });
@@ -70,9 +74,9 @@ public class InitializationService : IHostedService
         book3.WithAuthor(author1);
         book3.WithAuthor(author4);
         
-        await _dbContext.AddRangeAsync(book1, book2, book3);
+        await dbContext.AddRangeAsync(book1, book2, book3);
             
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        await dbContext.SaveChangesAsync(cancellationToken);
         
         var magazine1 = new Magazine() { Title = "Magazine 1", Bookstand = 3, Shelf = 1, Price = 15.99m };
         magazine1.WithAuthors(new List<Author> { author1, author2 });
@@ -80,9 +84,9 @@ public class InitializationService : IHostedService
         var magazine2 = new Magazine() { Title = "Magazine 2", Bookstand = 3, Shelf = 1, Price = 77m };
         magazine2.WithAuthor(author2);
         
-        await _dbContext.AddRangeAsync(magazine1, magazine2);
+        await dbContext.AddRangeAsync(magazine1, magazine2);
         
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        await dbContext.SaveChangesAsync(cancellationToken);
 
         var order1 = new Order();
         var order2 = new Order();
@@ -94,8 +98,8 @@ public class InitializationService : IHostedService
         order2.AddDetail(magazine1, 3);
         order2.AddDetail(magazine2, 3);
         
-        await _dbContext.AddRangeAsync(order1, order2);
+        await dbContext.AddRangeAsync(order1, order2);
         
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        await dbContext.SaveChangesAsync(cancellationToken);
     }
 }

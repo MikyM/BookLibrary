@@ -1,4 +1,4 @@
-﻿namespace Application.Models;
+﻿namespace Models;
 
 public interface IBatchPayload<out TPayload>
 {

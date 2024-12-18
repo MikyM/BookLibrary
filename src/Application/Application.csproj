@@ -20,17 +20,14 @@
       <PackageReference Include="EasyCaching.Serialization.SystemTextJson" Version="1.9.2" />
       <PackageReference Include="EFCoreSecondLevelCacheInterceptor" Version="4.9.0" />
       <PackageReference Include="FluentValidation.AspNetCore" Version="11.3.0" />
+      <PackageReference Include="Gridify.EntityFramework" Version="2.16.0" />
       <PackageReference Include="MediatR" Version="12.4.1" />
       <PackageReference Include="OneOf" Version="3.0.271" />
+      <PackageReference Include="Remora.Rest" Version="3.4.0" />
       <PackageReference Include="StackExchange.Redis.Extensions.AspNetCore" Version="10.2.0" />
       <PackageReference Include="ZiggyCreatures.FusionCache" Version="1.4.1" />
       <PackageReference Include="ZiggyCreatures.FusionCache.Backplane.StackExchangeRedis" Version="1.4.1" />
       <PackageReference Include="ZiggyCreatures.FusionCache.Serialization.SystemTextJson" Version="1.4.1" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <Folder Include="AutoMapper\" />
-      <Folder Include="Services\DataServices\Abstractions\" />
     </ItemGroup>
 
 </Project>

@@ -1,12 +1,9 @@
 ﻿using DataAccess.Configurations;
-using DataExplorer;
 using DataExplorer.Abstractions.Entities;
 using DataExplorer.EfCore;
 using DataExplorer.EfCore.DataContexts;
-using Domain;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
-using Microsoft.Extensions.Options;
 
 namespace DataAccess;
 

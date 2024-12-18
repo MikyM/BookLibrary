@@ -1,19 +1,35 @@
-﻿using Application.Models.Book;
+﻿using Application.Extensions;
+using DataAccess;
+using DataExplorer.EfCore.Abstractions.DataServices;
 using Gridify;
 using MediatR;
+using Models;
+using Models.Book;
 using Remora.Results;
 
 namespace Application.MediatR.Queries.Book;
 
 public static class GetBooksByGridifyQuery
 {
-    public sealed record Query(GridifyQuery GridifyQuery) : IQuery<Paging<IBook>>;
+    public sealed record Query(GridifyQuery GridifyQuery) : IQuery<IExtendedPaging<IBookPayload>>;
 
-    internal sealed class Handler : IRequestHandler<Query, Result<Paging<IBook>>>
+    [UsedImplicitly]
+    public sealed class Handler : IRequestHandler<Query, Result<IExtendedPaging<IBookPayload>>>
     {
-        public Task<Result<Paging<IBook>>> Handle(Query request, CancellationToken cancellationToken)
+        private readonly IReadOnlyDataService<Domain.Book,IBookLibraryDbContext> _dataService;
+
+        public Handler(IReadOnlyDataService<Domain.Book, IBookLibraryDbContext> dataService)
         {
-            throw new NotImplementedException();
+            _dataService = dataService;
+        }
+
+        public async Task<Result<IExtendedPaging<IBookPayload>>> Handle(Query request, CancellationToken cancellationToken)
+        {
+            var getResult = await _dataService.GetAsync<Domain.Book,long,BookPayload,IBookPayload>(request.GridifyQuery, cancellationToken);
+
+            return !getResult.IsDefined(out var entity) 
+                ? Result<IExtendedPaging<IBookPayload>>.FromError(getResult) 
+                : Result<IExtendedPaging<IBookPayload>>.FromSuccess(entity);
         }
     }
 }

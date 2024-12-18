@@ -45,10 +45,10 @@ public interface IPublication : ISnowflakeEntity, IEntityBase<long>
     /// <summary>
     /// Gets or sets the <see cref="Bookstand"/> on which this publication can be found.
     /// </summary>
-    public long Bookstand { get; set; }
+    public int Bookstand { get; set; }
     
     /// <summary>
     /// Gets or sets the <see cref="Shelf"/> on which this publication can be found.
     /// </summary>
-    public long Shelf { get; set; }
+    public int Shelf { get; set; }
 }

@@ -41,10 +41,10 @@ public abstract class Publication : SnowflakeEntityBase, IPublication
     public decimal Price { get; set; }
     
     /// <inheritdoc/>
-    public long Bookstand { get; set; }
+    public int Bookstand { get; set; }
     
     /// <inheritdoc/>
-    public long Shelf { get; set; }
+    public int Shelf { get; set; }
     
     public void WithAuthors(IEnumerable<Author> authors)
     {

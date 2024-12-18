@@ -1,7 +1,6 @@
 ﻿using System.Diagnostics;
 using MediatR;
 using Microsoft.Extensions.Logging;
-using ILoggerFactory = Castle.Core.Logging.ILoggerFactory;
 
 namespace Application.MediatR.Behaviors;
 

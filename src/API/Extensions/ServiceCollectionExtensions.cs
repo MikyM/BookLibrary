@@ -1,62 +1,94 @@
 ﻿using Asp.Versioning;
 using DataAccess;
-using EasyCaching.Core.Configurations;
 using EasyCaching.Redis;
 using EasyCaching.Serialization.SystemTextJson.Configurations;
 using EFCoreSecondLevelCacheInterceptor;
+using Gridify;
 using Keycloak.AuthServices.Authentication;
 using Keycloak.AuthServices.Authorization;
+using Keycloak.AuthServices.Common;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Migrations;
 using StackExchange.Redis;
 
 namespace API.Extensions;
 
 public static class ServiceCollectionExtensions
 {
-    public static IServiceCollection ConfigureAuth(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection ConfigureAuth(this IServiceCollection services, IConfiguration configuration, KeycloakInstallationOptions keycloakOptions)
     {
-        services.AddKeycloakWebApiAuthentication(configuration);
+        services.AddKeycloakWebApiAuthentication(configuration, opt =>
+        {
+            var useSsl = keycloakOptions.SslRequired != "none";
+            
+            opt.RequireHttpsMetadata = useSsl;
+
+            if (useSsl)
+            {
+                return;
+            }
+
+            var handler = new HttpClientHandler();
+            handler.ClientCertificateOptions = ClientCertificateOption.Manual;
+            handler.ServerCertificateCustomValidationCallback = (_, _, _, _) => true;
+            
+            opt.BackchannelHttpHandler = handler;
+        });
+
+        const string realmRole = "book-library-accessor";
+        const string getterRole = "getter";
+        const string posterRole = "poster";
         
         services.AddAuthorization(opt =>
         {
-            opt.FallbackPolicy = new AuthorizationPolicyBuilder()
+            /*opt.FallbackPolicy = new AuthorizationPolicyBuilder()
                 .RequireAuthenticatedUser()
-                .RequireRealmRoles("book_library_accessor")
-                .Build();
+                .RequireRealmRoles(realmRole)
+                .Build();*/
             
             opt.AddPolicy(AuthPolicies.DefaultAccessPolicy, policy =>
             {
-                policy.RequireRealmRoles("book_library_accessor");
-                policy.RequireAuthenticatedUser();
+                policy.RequireRealmRoles(realmRole);
             });
             
             opt.AddPolicy(AuthPolicies.GetAuthorsPolicy, policy =>
             {
-                policy.RequireResourceRoles("author_getter");
-                policy.RequireAuthenticatedUser();
+                policy.RequireRealmRoles(realmRole);
+                policy.RequireResourceRoles(getterRole);
             });
             
             opt.AddPolicy(AuthPolicies.GetBooksPolicy, policy =>
             {
-                policy.RequireResourceRoles("book_getter");
-                policy.RequireAuthenticatedUser();
+                policy.RequireRealmRoles(realmRole);
+                policy.RequireResourceRoles(getterRole);
             });
             
             opt.AddPolicy(AuthPolicies.PostBooksPolicy, policy =>
             {
-                policy.RequireResourceRoles("books_poster");
-                policy.RequireAuthenticatedUser();
+                policy.RequireRealmRoles(realmRole);
+                policy.RequireResourceRoles(posterRole);
             });
             
             opt.AddPolicy(AuthPolicies.GetOrdersPolicy, policy =>
             {
-                policy.RequireResourceRoles("orders_getter");
-                policy.RequireAuthenticatedUser();
+                policy.RequireRealmRoles(realmRole);
+                policy.RequireResourceRoles(getterRole);
             });
             
         }).AddKeycloakAuthorization(configuration);
+
+        return services;
+    }
+    
+    public static IServiceCollection ConfigureHealthChecks(this IServiceCollection services, IConfiguration configuration, KeycloakInstallationOptions keycloakOptions)
+    {
+        services.AddHealthChecks()
+            .AddNpgSql(x => configuration.GetConnectionString("DataContext") ?? throw new NullReferenceException())
+            .AddRedis(x => x.GetRequiredService<IConnectionMultiplexer>())
+            .AddIdentityServer(new Uri(keycloakOptions.AuthServerUrl ?? throw new NullReferenceException()),
+                "/realms/" + keycloakOptions.Realm + "/.well-known/openid-configuration", "Keycloak");
 
         return services;
     }
@@ -73,7 +105,7 @@ public static class ServiceCollectionExtensions
         })
         .AddApiExplorer(options =>
         {
-            options.GroupNameFormat = "'v'V";
+            options.GroupNameFormat = "'v'VVV";
             options.SubstituteApiVersionInUrl = true;
         });
 
@@ -108,6 +140,8 @@ public static class ServiceCollectionExtensions
             #endif
 
             opt.UseEasyCachingCoreProvider("Hybrid", true);
+
+            opt.CacheAllQueries(CacheExpirationMode.Sliding, TimeSpan.FromMinutes(5));
         });
 
         services.AddEasyCaching(opt =>
@@ -161,8 +195,11 @@ public static class ServiceCollectionExtensions
             {
                 // simple retry strategy
                 pg.EnableRetryOnFailure(3, TimeSpan.FromSeconds(10), null);
-            });
+            })
+            .ReplaceService<IHistoryRepository, MigrationHistory>();
         });
+        
+        GridifyGlobalConfiguration.EnableEntityFrameworkCompatibilityLayer();
         
         return services;
     }

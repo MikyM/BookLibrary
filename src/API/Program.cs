@@ -1,13 +1,17 @@
 using System.Net;
 using API;
 using API.Extensions;
+using Application.Json;
 using Application.MediatR.Behaviors;
 using Application.MediatR.Queries.Book;
 using Application.Services;
 using Application.Validators;
+using Asp.Versioning.ApiExplorer;
 using Autofac;
 using Autofac.Extensions.DependencyInjection;
 using FluentValidation;
+using Keycloak.AuthServices.Common;
+using Microsoft.OpenApi.Models;
 using Serilog;
 using Serilog.Events;
 using Serilog.Formatting.Compact;
@@ -38,11 +42,56 @@ try
             y.AllowAnyHeader();
             y.SetIsOriginAllowed(_ => true);
         }));
-
-    builder.Services.ConfigureAuth(builder.Configuration); 
     
     builder.Services.AddEndpointsApiExplorer();
-    builder.Services.AddSwaggerGen();
+
+    var jsonConfigure = new BookLibraryJsonOptionsConfigurator();
+
+    builder.Services.ConfigureHttpJsonOptions(x => jsonConfigure.Configure(x.SerializerOptions));
+    
+    var keycloakOptions = builder.Configuration.GetSection("Keycloak").Get<KeycloakInstallationOptions>() ?? throw new InvalidOperationException("Missing Keycloak installation");
+    
+    builder.Services.ConfigureAuth(builder.Configuration, keycloakOptions); 
+    
+    builder.Services.AddSwaggerGen(options =>
+    {
+        options.AddSecurityDefinition("Keycloak", new OpenApiSecurityScheme
+        {
+            OpenIdConnectUrl = new Uri($"{keycloakOptions.AuthServerUrl}/realms/" + keycloakOptions.Realm + "/.well-known/openid-configuration"),
+            Type = SecuritySchemeType.OAuth2,
+            Flows = new OpenApiOAuthFlows
+            {
+                AuthorizationCode = new OpenApiOAuthFlow
+                {
+                    TokenUrl = new Uri($"{keycloakOptions.AuthServerUrl?.TrimEnd('/')}/realms/{keycloakOptions.Realm}/protocol/openid-connect/token"),
+                    AuthorizationUrl = new Uri($"{keycloakOptions.AuthServerUrl?.TrimEnd('/')}/realms/{keycloakOptions.Realm}/protocol/openid-connect/auth"),
+                    Scopes = new Dictionary<string, string>
+                    {
+                        { "openid", "openid" },
+                        { "profile", "profile" },
+                        { "book-library-api", "book-library-api" }
+                    }
+                }
+            }
+        });
+    
+        OpenApiSecurityScheme keycloakSecurityScheme = new()
+        {
+            Reference = new OpenApiReference
+            {
+                Id = "Keycloak",
+                Type = ReferenceType.SecurityScheme,
+            },
+            In = ParameterLocation.Header,
+            Name = "Bearer",
+            Scheme = "Bearer",
+        };
+
+        options.AddSecurityRequirement(new OpenApiSecurityRequirement
+        {
+            { keycloakSecurityScheme, Array.Empty<string>() },
+        });
+    });
 
     builder.Services.ConfigureVersioning();
     
@@ -69,14 +118,15 @@ try
 
     builder.Services.AddHostedService<InitializationService>();
 
-    builder.Services.AddValidatorsFromAssembly(typeof(GridifyQueryValidator).Assembly);
+    builder.Services.AddValidatorsFromAssembly(typeof(AddBookPayloadValidator).Assembly);
 
-    builder.Services.AddHealthChecks();
+    builder.Services.ConfigureHealthChecks(builder.Configuration, keycloakOptions);
 
     builder.Services.AddMediatR(opt =>
     {
         opt.AddOpenBehavior(typeof(LoggingBehavior<,>));
-        opt.AddOpenBehavior(typeof(ExceptionToResultBehavior<,>));
+
+        opt.RegisterGenericHandlers = true;
 
         opt.RegisterServicesFromAssembly(typeof(GetBookById).Assembly);
     });
@@ -96,31 +146,45 @@ try
             diagnosticContext.Set("RequestScheme", httpContext.Request.Scheme);
         };
     });
+
+    var versionProvider = app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
     
     if (app.Environment.IsDevelopment())
     {
         app.UseSwagger();
-        app.UseSwaggerUI();
+        app.UseSwaggerUI(opt =>
+        {
+            foreach (var desc in versionProvider.ApiVersionDescriptions)
+            {
+                opt.SwaggerEndpoint($"{desc.GroupName}/swagger.json", desc.GroupName.ToUpperInvariant());
+            }
+            
+            opt.OAuthClientSecret(keycloakOptions.Credentials.Secret);
+            opt.OAuthClientId(keycloakOptions.Resource);
+            opt.OAuthAppName("Book Library API");
+            opt.OAuthScopeSeparator(" ");
+            opt.OAuthScopes("book-library-api");
+            opt.OAuthUsePkce();
+        });
     }
+    
+    app.UseExceptionHandler();
 
+    app.UseStatusCodePages();
+    
     //app.UseHttpsRedirection();
 
     app.UseRateLimiter();
 
     app.UseCors(AuthPolicies.CorsPolicy);
-
-    app.UseAuthorization();
-    app.UseAuthentication();
-
-    app.UseStatusCodePages();
     
-    app.UseExceptionHandler();
+    app.UseAuthentication();
+    
+    app.UseAuthorization();
     
     app.UseResponseCaching();
 
     app.MapBookLibrary();
-
-    app.MapHealthChecks("health");
 
     app.Run();
 }

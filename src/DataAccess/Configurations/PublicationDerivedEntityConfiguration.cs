@@ -1,5 +1,4 @@
-﻿using Domain;
-using Domain.Base;
+﻿using Domain.Base;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -9,11 +8,6 @@ public abstract class PublicationDerivedEntityConfiguration<TEntity> : IEntityTy
 {
     public void Configure(EntityTypeBuilder<TEntity> builder)
     {
-        /*builder.Metadata.FindNavigation(nameof(Publication.Authors))!.SetPropertyAccessMode(PropertyAccessMode.Field);
-        builder.Metadata.FindNavigation(nameof(Publication.PublicationAuthors))!.SetPropertyAccessMode(PropertyAccessMode.Field);
-        builder.Metadata.FindNavigation(nameof(Publication.Orders))!.SetPropertyAccessMode(PropertyAccessMode.Field);
-        builder.Metadata.FindNavigation(nameof(Publication.OrderDetails))!.SetPropertyAccessMode(PropertyAccessMode.Field);*/
-        
         ConfigureEntity(builder);
     }
     
